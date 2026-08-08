@@ -1,0 +1,145 @@
+local R = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local W = R:CreateWindow({Name="MM2 Ultimate Hub",LoadingTitle="Loading...",ConfigurationSaving={Enabled=false}})
+local T = W:CreateTab("Main",4483362458)
+local P,Wspace,RS,LP,Cam = game:GetService("Players"),game:GetService("Workspace"),game:GetService("RunService"),game:GetService("Players").LocalPlayer,game:GetService("Workspace").CurrentCamera
+local esp,aim,invis,gunEsp = false,false,false,false
+
+local function gRole(p)
+    if not p then return "Innocent" end
+    local m,s = false,false
+    local function ch(c)
+        if c then for _,i in ipairs(c:GetChildren())do 
+            if i:IsA("Tool")then 
+                if i.Name=="Knife" then m=true 
+                elseif i.Name=="Gun" or i.Name=="Revolver" then s=true end 
+            end 
+        end end
+    end
+    ch(p:FindFirstChild("Backpack")) ch(p.Character)
+    return m and "Murderer" or (s and "Sheriff" or "Innocent")
+end
+
+-- Aimbot ฆาตกร
+T:CreateToggle({Name="Aimbot Murderer",CurrentValue=false,Callback=function(v)
+    aim=v 
+    if aim then 
+        RS.RenderStepped:Connect(function()
+            if not aim then return end
+            for _,p in ipairs(P:GetPlayers())do 
+                if p~=LP and gRole(p)=="Murderer" and p.Character and p.Character:FindFirstChild("Head") then 
+                    Cam.CFrame=CFrame.new(Cam.CFrame.Position,p.Character.Head.Position)
+                    break 
+                end 
+            end
+        end)
+    end
+end})
+
+-- ล่องหน
+T:CreateToggle({Name="Invisibility",CurrentValue=false,Callback=function(v)
+    invis=v 
+    local c=LP.Character 
+    if c then 
+        for _,p in ipairs(c:GetDescendants())do 
+            if p:IsA("BasePart") and p.Name~="HumanoidRootPart" then 
+                p.Transparency=invis and 1 or 0 
+            elseif p:IsA("Accessory") then
+                local h=p:FindFirstChild("Handle")
+                if h then h.Transparency=invis and 1 or 0 end
+            end
+        end 
+    end
+end})
+
+-- Role ESP (แยกสีคน)
+T:CreateToggle({Name="Role ESP",CurrentValue=false,Callback=function(v)
+    esp=v 
+    if esp then
+        task.spawn(function()
+            while esp do
+                for _,p in ipairs(P:GetPlayers())do 
+                    if p~=LP and p.Character then 
+                        local h=p.Character:FindFirstChild("RoleHighlight") or Instance.new("Highlight",p.Character)
+                        h.Name="RoleHighlight" 
+                        local r=gRole(p)
+                        h.FillColor = r=="Murderer" and Color3.fromRGB(255,0,0) or (r=="Sheriff" and Color3.fromRGB(0,150,255) or Color3.fromRGB(0,255,0))
+                        h.OutlineColor = h.FillColor
+                        h.Enabled=true
+                    end 
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        for _,p in ipairs(P:GetPlayers())do 
+            if p.Character and p.Character:FindFirstChild("RoleHighlight") then 
+                p.Character.RoleHighlight:Destroy()
+            end 
+        end
+    end
+end})
+
+-- Gun ESP (มองทะลุเห็นปืนที่ตกอยู่)
+T:CreateToggle({Name="Gun ESP",CurrentValue=false,Callback=function(v)
+    gunEsp = v
+    if gunEsp then
+        task.spawn(function()
+            while gunEsp do
+                for _, obj in ipairs(Wspace:GetChildren()) do
+                    if obj.Name == "GunDrop" or obj.Name == "Gun" or obj.Name == "Revolver" or (obj:IsA("Tool") and (obj.Name:lower():find("gun") or obj.Name:lower():find("revolver"))) then
+                        if not obj:FindFirstChild("GunHighlight") then
+                            local h = Instance.new("Highlight")
+                            h.Name = "GunHighlight"
+                            h.FillColor = Color3.fromRGB(255, 165, 0) -- สีส้ม
+                            h.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            h.Parent = obj
+                        end
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        for _, obj in ipairs(Wspace:GetChildren()) do
+            if obj:FindFirstChild("GunHighlight") then
+                obj.GunHighlight:Destroy()
+            end
+        end
+    end
+end})
+
+-- วาร์ปไปเอาปืนที่ตกอยู่
+T:CreateButton({Name="TP to Gun",Callback=function()
+    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local targetPart = nil
+    for _, obj in ipairs(Wspace:GetChildren()) do
+        if obj.Name == "GunDrop" or obj.Name == "Gun" or obj.Name == "Revolver" or obj:IsA("BackpackItem") then
+            targetPart = obj
+            break
+        elseif obj:IsA("Tool") and (obj.Name:lower():find("gun") or obj.Name:lower():find("revolver")) then
+            targetPart = obj
+            break
+        end
+    end
+    
+    if targetPart then
+        pcall(function()
+            local cf
+            if targetPart:IsA("Model") then
+                cf = targetPart:GetPivot()
+            elseif targetPart:IsA("Tool") and targetPart:FindFirstChild("Handle") then
+                cf = targetPart.Handle.CFrame
+            elseif targetPart:IsA("BasePart") then
+                cf = targetPart.CFrame
+            end
+            
+            if cf then
+                hrp.CFrame = cf + Vector3.new(0, 3, 0)
+            end
+        end)
+    else
+        print("ยังไม่พบปืนตกอยู่ในแมพตอนนี้")
+    end
+end})
